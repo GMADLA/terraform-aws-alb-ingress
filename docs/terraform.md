@@ -18,6 +18,7 @@
 | authentication_oidc_token_endpoint | OIDC Token Endpoint | string | `` | no |
 | authentication_oidc_user_info_endpoint | OIDC User Info Endpoint | string | `` | no |
 | authentication_type | Authentication type. Supported values are `COGNITO` and `OIDC` | string | `` | no |
+| blue_green_deployment | Creates ingress rules for b/g deployment ingnoring listener_arn changes. | string | `false` | no |
 | delimiter | Delimiter to be used between `namespace`, `name`, `stage` and `attributes` | string | `-` | no |
 | deregistration_delay | The amount of time to wait in seconds while deregistering target | string | `15` | no |
 | health_check_healthy_threshold | The number of consecutive health checks successes required before healthy | string | `2` | no |
@@ -48,4 +49,3 @@
 | target_group_arn | ALB Target group ARN |
 | target_group_arn_suffix | ALB Target group ARN suffix |
 | target_group_name | ALB Target group name |
-

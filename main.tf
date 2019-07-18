@@ -1,6 +1,7 @@
 locals {
   target_group_enabled = "${var.target_group_arn == "" ? "true" : "false"}"
   target_group_arn     = "${local.target_group_enabled == "true" ? aws_lb_target_group.default.arn : var.target_group_arn}"
+  listener_ignore_changes = "${var.blue_green_deployment == "true" ? list("listener_arn") : list()}"
 }
 
 data "aws_lb_target_group" "default" {
@@ -58,6 +59,10 @@ resource "aws_lb_listener_rule" "unauthenticated_paths" {
     field  = "path-pattern"
     values = ["${var.unauthenticated_paths}"]
   }
+
+  lifecycle {
+      ignore_changes = "${local.listener_ignore_changes}"
+  }
 }
 
 resource "aws_lb_listener_rule" "authenticated_paths_oidc" {
@@ -88,6 +93,10 @@ resource "aws_lb_listener_rule" "authenticated_paths_oidc" {
     field  = "path-pattern"
     values = ["${var.authenticated_paths}"]
   }
+
+  lifecycle {
+      ignore_changes = "${local.listener_ignore_changes}"
+  }
 }
 
 resource "aws_lb_listener_rule" "authenticated_paths_cognito" {
@@ -115,6 +124,10 @@ resource "aws_lb_listener_rule" "authenticated_paths_cognito" {
     field  = "path-pattern"
     values = ["${var.authenticated_paths}"]
   }
+
+  lifecycle {
+      ignore_changes = "${local.listener_ignore_changes}"
+  }
 }
 
 resource "aws_lb_listener_rule" "unauthenticated_hosts" {
@@ -132,6 +145,10 @@ resource "aws_lb_listener_rule" "unauthenticated_hosts" {
   condition {
     field  = "host-header"
     values = ["${var.unauthenticated_hosts}"]
+  }
+
+  lifecycle {
+      ignore_changes = "${local.listener_ignore_changes}"
   }
 }
 
@@ -163,6 +180,10 @@ resource "aws_lb_listener_rule" "authenticated_hosts_oidc" {
     field  = "host-header"
     values = ["${var.authenticated_hosts}"]
   }
+
+  lifecycle {
+      ignore_changes = "${local.listener_ignore_changes}"
+  }
 }
 
 resource "aws_lb_listener_rule" "authenticated_hosts_cognito" {
@@ -190,6 +211,10 @@ resource "aws_lb_listener_rule" "authenticated_hosts_cognito" {
     field  = "host-header"
     values = ["${var.authenticated_hosts}"]
   }
+
+  lifecycle {
+      ignore_changes = "${local.listener_ignore_changes}"
+  }
 }
 
 resource "aws_lb_listener_rule" "unauthenticated_hosts_paths" {
@@ -212,6 +237,10 @@ resource "aws_lb_listener_rule" "unauthenticated_hosts_paths" {
   condition {
     field  = "path-pattern"
     values = ["${var.unauthenticated_paths}"]
+  }
+
+  lifecycle {
+      ignore_changes = "${local.listener_ignore_changes}"
   }
 }
 
@@ -248,6 +277,10 @@ resource "aws_lb_listener_rule" "authenticated_hosts_paths_oidc" {
     field  = "path-pattern"
     values = ["${var.authenticated_paths}"]
   }
+
+  lifecycle {
+      ignore_changes = "${local.listener_ignore_changes}"
+  }
 }
 
 resource "aws_lb_listener_rule" "authenticated_hosts_paths_cognito" {
@@ -279,5 +312,9 @@ resource "aws_lb_listener_rule" "authenticated_hosts_paths_cognito" {
   condition {
     field  = "path-pattern"
     values = ["${var.authenticated_paths}"]
+  }
+
+  lifecycle {
+      ignore_changes = "${local.listener_ignore_changes}"
   }
 }

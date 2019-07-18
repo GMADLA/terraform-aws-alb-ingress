@@ -220,3 +220,9 @@ variable "authentication_oidc_user_info_endpoint" {
   description = "OIDC User Info Endpoint"
   default     = ""
 }
+
+variable "blue_green_deployment" {
+    type        = "string"
+    default     = "false"
+    description = "Creates ingress rules for b/g deployment ingnoring listener_arn changes."
+}
