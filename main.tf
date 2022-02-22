@@ -109,7 +109,7 @@ resource "aws_lb_listener_rule" "unauthenticated_paths_ignore_changes_action" {
     }
   }
   lifecycle {
-    ignore_changes = ["action"]
+    ignore_changes = [action]
   }
 }
 
@@ -211,7 +211,7 @@ resource "aws_lb_listener_rule" "authenticated_paths_oidc_ignore_changes_action"
   }
 
   lifecycle {
-    ignore_changes = ["action"]
+    ignore_changes = [action]
   }
 }
 
@@ -307,7 +307,7 @@ resource "aws_lb_listener_rule" "authenticated_paths_cognito_ignore_changes_acti
   }
 
   lifecycle {
-    ignore_changes = ["action"]
+    ignore_changes = [action]
   }
 }
 
@@ -347,7 +347,7 @@ resource "aws_lb_listener_rule" "unauthenticated_hosts_ignore_changes_action" {
   }
 
   lifecycle {
-    ignore_changes = ["action"]
+    ignore_changes = [action]
   }
 }
 
@@ -421,7 +421,7 @@ resource "aws_lb_listener_rule" "authenticated_hosts_oidc_ignore_changes_action"
   }
 
   lifecycle {
-    ignore_changes = ["action"]
+    ignore_changes = [action]
   }
 }
 
@@ -489,7 +489,7 @@ resource "aws_lb_listener_rule" "authenticated_hosts_cognito_ignore_changes_acti
   }
 
   lifecycle {
-    ignore_changes = ["action"]
+    ignore_changes = [action]
   }
 }
 
@@ -569,7 +569,7 @@ resource "aws_lb_listener_rule" "unauthenticated_hosts_paths_ignore_changes_acti
   }
 
   lifecycle {
-    ignore_changes = ["action"]
+    ignore_changes = [action]
   }
 }
 
@@ -655,7 +655,7 @@ resource "aws_lb_listener_rule" "authenticated_hosts_paths_oidc_ignore_changes_a
   }
 
   lifecycle {
-    ignore_changes = ["action"]
+    ignore_changes = [action]
   }
 }
 
@@ -735,6 +735,6 @@ resource "aws_lb_listener_rule" "authenticated_hosts_paths_cognito_ignore_change
   }
 
   lifecycle {
-    ignore_changes = ["action"]
+    ignore_changes = [action]
   }
 }
