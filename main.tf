@@ -1,6 +1,5 @@
 locals {
-  target_group_arn             = var.default_target_group_enabled ? join("", aws_lb_target_group.default.*.arn) : var.target_group_arn
-  listener_rule_ignore_changes = var.ignore_changes_action ? ["action"] : []
+  target_group_arn = var.default_target_group_enabled ? join("", aws_lb_target_group.default.*.arn) : var.target_group_arn
 }
 
 data "aws_lb_target_group" "default" {
@@ -48,7 +47,39 @@ resource "aws_lb_target_group" "default" {
 }
 
 resource "aws_lb_listener_rule" "unauthenticated_paths" {
-  count = module.this.enabled && length(var.unauthenticated_paths) > 0 && length(var.unauthenticated_hosts) == 0 ? length(var.unauthenticated_listener_arns) : 0
+  count = module.this.enabled && length(var.unauthenticated_paths) > 0 && length(var.unauthenticated_hosts) == 0 && var.ignore_changes_action == false ? length(var.unauthenticated_listener_arns) : 0
+
+  listener_arn = var.unauthenticated_listener_arns[count.index]
+  priority     = var.unauthenticated_priority > 0 ? var.unauthenticated_priority + count.index : null
+
+  action {
+    type             = "forward"
+    target_group_arn = local.target_group_arn
+  }
+
+  condition {
+    path_pattern {
+      values = var.unauthenticated_paths
+    }
+  }
+
+  dynamic "condition" {
+    for_each = length(var.listener_http_header_conditions) > 0 ? [""] : []
+    content {
+      dynamic "http_header" {
+        for_each = var.listener_http_header_conditions
+
+        content {
+          http_header_name = http_header.value["name"]
+          values           = http_header.value["value"]
+        }
+      }
+    }
+  }
+}
+
+resource "aws_lb_listener_rule" "unauthenticated_paths_ignore_changes_action" {
+  count = module.this.enabled && length(var.unauthenticated_paths) > 0 && length(var.unauthenticated_hosts) == 0 && var.ignore_changes_action ? length(var.unauthenticated_listener_arns) : 0
 
   listener_arn = var.unauthenticated_listener_arns[count.index]
   priority     = var.unauthenticated_priority > 0 ? var.unauthenticated_priority + count.index : null
@@ -78,12 +109,12 @@ resource "aws_lb_listener_rule" "unauthenticated_paths" {
     }
   }
   lifecycle {
-    ignore_changes = local.listener_rule_ignore_changes
+    ignore_changes = ["action"]
   }
 }
 
 resource "aws_lb_listener_rule" "authenticated_paths_oidc" {
-  count = module.this.enabled && var.authentication_type == "OIDC" && length(var.authenticated_paths) > 0 && length(var.authenticated_hosts) == 0 ? length(var.authenticated_listener_arns) : 0
+  count = module.this.enabled && var.authentication_type == "OIDC" && length(var.authenticated_paths) > 0 && length(var.authenticated_hosts) == 0 && var.ignore_changes_action == false ? length(var.authenticated_listener_arns) : 0
 
   listener_arn = var.authenticated_listener_arns[count.index]
   priority     = var.authenticated_priority > 0 ? var.authenticated_priority + count.index : null
@@ -129,13 +160,109 @@ resource "aws_lb_listener_rule" "authenticated_paths_oidc" {
       }
     }
   }
+}
+
+resource "aws_lb_listener_rule" "authenticated_paths_oidc_ignore_changes_action" {
+  count = module.this.enabled && var.authentication_type == "OIDC" && length(var.authenticated_paths) > 0 && length(var.authenticated_hosts) == 0 && var.ignore_changes_action ? length(var.authenticated_listener_arns) : 0
+
+  listener_arn = var.authenticated_listener_arns[count.index]
+  priority     = var.authenticated_priority > 0 ? var.authenticated_priority + count.index : null
+
+  action {
+    type = "authenticate-oidc"
+
+    authenticate_oidc {
+      client_id              = var.authentication_oidc_client_id
+      client_secret          = var.authentication_oidc_client_secret
+      issuer                 = var.authentication_oidc_issuer
+      authorization_endpoint = var.authentication_oidc_authorization_endpoint
+      token_endpoint         = var.authentication_oidc_token_endpoint
+      user_info_endpoint     = var.authentication_oidc_user_info_endpoint
+      scope                  = var.authentication_oidc_scope
+
+      on_unauthenticated_request          = var.authentication_oidc_on_unauthenticated_request
+      authentication_request_extra_params = var.authentication_oidc_request_extra_params
+    }
+  }
+
+  action {
+    type             = "forward"
+    target_group_arn = local.target_group_arn
+  }
+
+  condition {
+    path_pattern {
+      values = var.authenticated_paths
+    }
+  }
+
+  dynamic "condition" {
+    for_each = length(var.listener_http_header_conditions) > 0 ? [""] : []
+    content {
+      dynamic "http_header" {
+        for_each = var.listener_http_header_conditions
+
+        content {
+          http_header_name = http_header.value["name"]
+          values           = http_header.value["value"]
+        }
+      }
+    }
+  }
+
   lifecycle {
-    ignore_changes = local.listener_rule_ignore_changes
+    ignore_changes = ["action"]
   }
 }
 
 resource "aws_lb_listener_rule" "authenticated_paths_cognito" {
-  count = module.this.enabled && var.authentication_type == "COGNITO" && length(var.authenticated_paths) > 0 && length(var.authenticated_hosts) == 0 ? length(var.authenticated_listener_arns) : 0
+  count = module.this.enabled && var.authentication_type == "COGNITO" && length(var.authenticated_paths) > 0 && length(var.authenticated_hosts) == 0 && var.ignore_changes_action == false ? length(var.authenticated_listener_arns) : 0
+
+  listener_arn = var.authenticated_listener_arns[count.index]
+  priority     = var.authenticated_priority > 0 ? var.authenticated_priority + count.index : null
+
+  action {
+    type = "authenticate-cognito"
+
+    authenticate_cognito {
+      user_pool_arn       = var.authentication_cognito_user_pool_arn
+      user_pool_client_id = var.authentication_cognito_user_pool_client_id
+      user_pool_domain    = var.authentication_cognito_user_pool_domain
+      scope               = var.authentication_cognito_scope
+
+      on_unauthenticated_request          = var.authentication_cognito_on_unauthenticated_request
+      authentication_request_extra_params = var.authentication_cognito_request_extra_params
+    }
+  }
+
+  action {
+    type             = "forward"
+    target_group_arn = local.target_group_arn
+  }
+
+  condition {
+    path_pattern {
+      values = var.authenticated_paths
+    }
+  }
+
+  dynamic "condition" {
+    for_each = length(var.listener_http_header_conditions) > 0 ? [""] : []
+    content {
+      dynamic "http_header" {
+        for_each = var.listener_http_header_conditions
+
+        content {
+          http_header_name = http_header.value["name"]
+          values           = http_header.value["value"]
+        }
+      }
+    }
+  }
+}
+
+resource "aws_lb_listener_rule" "authenticated_paths_cognito_ignore_changes_action" {
+  count = module.this.enabled && var.authentication_type == "COGNITO" && length(var.authenticated_paths) > 0 && length(var.authenticated_hosts) == 0 && var.ignore_changes_action ? length(var.authenticated_listener_arns) : 0
 
   listener_arn = var.authenticated_listener_arns[count.index]
   priority     = var.authenticated_priority > 0 ? var.authenticated_priority + count.index : null
@@ -180,12 +307,30 @@ resource "aws_lb_listener_rule" "authenticated_paths_cognito" {
   }
 
   lifecycle {
-    ignore_changes = local.listener_rule_ignore_changes
+    ignore_changes = ["action"]
   }
 }
 
 resource "aws_lb_listener_rule" "unauthenticated_hosts" {
-  count = module.this.enabled && length(var.unauthenticated_hosts) > 0 && length(var.unauthenticated_paths) == 0 ? length(var.unauthenticated_listener_arns) : 0
+  count = module.this.enabled && length(var.unauthenticated_hosts) > 0 && length(var.unauthenticated_paths) == 0 && var.ignore_changes_action == false ? length(var.unauthenticated_listener_arns) : 0
+
+  listener_arn = var.unauthenticated_listener_arns[count.index]
+  priority     = var.unauthenticated_priority > 0 ? var.unauthenticated_priority + count.index : null
+
+  action {
+    type             = "forward"
+    target_group_arn = local.target_group_arn
+  }
+
+  condition {
+    host_header {
+      values = var.unauthenticated_hosts
+    }
+  }
+}
+
+resource "aws_lb_listener_rule" "unauthenticated_hosts_ignore_changes_action" {
+  count = module.this.enabled && length(var.unauthenticated_hosts) > 0 && length(var.unauthenticated_paths) == 0 && var.ignore_changes_action ? length(var.unauthenticated_listener_arns) : 0
 
   listener_arn = var.unauthenticated_listener_arns[count.index]
   priority     = var.unauthenticated_priority > 0 ? var.unauthenticated_priority + count.index : null
@@ -202,12 +347,47 @@ resource "aws_lb_listener_rule" "unauthenticated_hosts" {
   }
 
   lifecycle {
-    ignore_changes = local.listener_rule_ignore_changes
+    ignore_changes = ["action"]
   }
 }
 
 resource "aws_lb_listener_rule" "authenticated_hosts_oidc" {
-  count = module.this.enabled && var.authentication_type == "OIDC" && length(var.authenticated_hosts) > 0 && length(var.authenticated_paths) == 0 ? length(var.authenticated_listener_arns) : 0
+  count = module.this.enabled && var.authentication_type == "OIDC" && length(var.authenticated_hosts) > 0 && length(var.authenticated_paths) == 0 && var.ignore_changes_action == false ? length(var.authenticated_listener_arns) : 0
+
+  listener_arn = var.authenticated_listener_arns[count.index]
+  priority     = var.authenticated_priority > 0 ? var.authenticated_priority + count.index : null
+
+  action {
+    type = "authenticate-oidc"
+
+    authenticate_oidc {
+      client_id              = var.authentication_oidc_client_id
+      client_secret          = var.authentication_oidc_client_secret
+      issuer                 = var.authentication_oidc_issuer
+      authorization_endpoint = var.authentication_oidc_authorization_endpoint
+      token_endpoint         = var.authentication_oidc_token_endpoint
+      user_info_endpoint     = var.authentication_oidc_user_info_endpoint
+      scope                  = var.authentication_oidc_scope
+
+      on_unauthenticated_request          = var.authentication_oidc_on_unauthenticated_request
+      authentication_request_extra_params = var.authentication_oidc_request_extra_params
+    }
+  }
+
+  action {
+    type             = "forward"
+    target_group_arn = local.target_group_arn
+  }
+
+  condition {
+    host_header {
+      values = var.authenticated_hosts
+    }
+  }
+}
+
+resource "aws_lb_listener_rule" "authenticated_hosts_oidc_ignore_changes_action" {
+  count = module.this.enabled && var.authentication_type == "OIDC" && length(var.authenticated_hosts) > 0 && length(var.authenticated_paths) == 0 && var.ignore_changes_action ? length(var.authenticated_listener_arns) : 0
 
   listener_arn = var.authenticated_listener_arns[count.index]
   priority     = var.authenticated_priority > 0 ? var.authenticated_priority + count.index : null
@@ -241,12 +421,44 @@ resource "aws_lb_listener_rule" "authenticated_hosts_oidc" {
   }
 
   lifecycle {
-    ignore_changes = local.listener_rule_ignore_changes
+    ignore_changes = ["action"]
   }
 }
 
 resource "aws_lb_listener_rule" "authenticated_hosts_cognito" {
-  count = module.this.enabled && var.authentication_type == "COGNITO" && length(var.authenticated_hosts) > 0 && length(var.authenticated_paths) == 0 ? length(var.authenticated_listener_arns) : 0
+  count = module.this.enabled && var.authentication_type == "COGNITO" && length(var.authenticated_hosts) > 0 && length(var.authenticated_paths) == 0 && var.ignore_changes_action == false ? length(var.authenticated_listener_arns) : 0
+
+  listener_arn = var.authenticated_listener_arns[count.index]
+  priority     = var.authenticated_priority > 0 ? var.authenticated_priority + count.index : null
+
+  action {
+    type = "authenticate-cognito"
+
+    authenticate_cognito {
+      user_pool_arn       = var.authentication_cognito_user_pool_arn
+      user_pool_client_id = var.authentication_cognito_user_pool_client_id
+      user_pool_domain    = var.authentication_cognito_user_pool_domain
+      scope               = var.authentication_cognito_scope
+
+      on_unauthenticated_request          = var.authentication_cognito_on_unauthenticated_request
+      authentication_request_extra_params = var.authentication_cognito_request_extra_params
+    }
+  }
+
+  action {
+    type             = "forward"
+    target_group_arn = local.target_group_arn
+  }
+
+  condition {
+    host_header {
+      values = var.authenticated_hosts
+    }
+  }
+}
+
+resource "aws_lb_listener_rule" "authenticated_hosts_cognito_ignore_changes_action" {
+  count = module.this.enabled && var.authentication_type == "COGNITO" && length(var.authenticated_hosts) > 0 && length(var.authenticated_paths) == 0 && var.ignore_changes_action ? length(var.authenticated_listener_arns) : 0
 
   listener_arn = var.authenticated_listener_arns[count.index]
   priority     = var.authenticated_priority > 0 ? var.authenticated_priority + count.index : null
@@ -277,12 +489,50 @@ resource "aws_lb_listener_rule" "authenticated_hosts_cognito" {
   }
 
   lifecycle {
-    ignore_changes = local.listener_rule_ignore_changes
+    ignore_changes = ["action"]
   }
 }
 
 resource "aws_lb_listener_rule" "unauthenticated_hosts_paths" {
-  count = module.this.enabled && length(var.unauthenticated_paths) > 0 && length(var.unauthenticated_hosts) > 0 ? length(var.unauthenticated_listener_arns) : 0
+  count = module.this.enabled && length(var.unauthenticated_paths) > 0 && length(var.unauthenticated_hosts) > 0 && var.ignore_changes_action == false ? length(var.unauthenticated_listener_arns) : 0
+
+  listener_arn = var.unauthenticated_listener_arns[count.index]
+  priority     = var.unauthenticated_priority > 0 ? var.unauthenticated_priority + count.index : null
+
+  action {
+    type             = "forward"
+    target_group_arn = local.target_group_arn
+  }
+
+  condition {
+    host_header {
+      values = var.unauthenticated_hosts
+    }
+  }
+
+  condition {
+    path_pattern {
+      values = var.unauthenticated_paths
+    }
+  }
+
+  dynamic "condition" {
+    for_each = length(var.listener_http_header_conditions) > 0 ? [""] : []
+    content {
+      dynamic "http_header" {
+        for_each = var.listener_http_header_conditions
+
+        content {
+          http_header_name = http_header.value["name"]
+          values           = http_header.value["value"]
+        }
+      }
+    }
+  }
+}
+
+resource "aws_lb_listener_rule" "unauthenticated_hosts_paths_ignore_changes_action" {
+  count = module.this.enabled && length(var.unauthenticated_paths) > 0 && length(var.unauthenticated_hosts) > 0 && var.ignore_changes_action ? length(var.unauthenticated_listener_arns) : 0
 
   listener_arn = var.unauthenticated_listener_arns[count.index]
   priority     = var.unauthenticated_priority > 0 ? var.unauthenticated_priority + count.index : null
@@ -319,12 +569,53 @@ resource "aws_lb_listener_rule" "unauthenticated_hosts_paths" {
   }
 
   lifecycle {
-    ignore_changes = local.listener_rule_ignore_changes
+    ignore_changes = ["action"]
   }
 }
 
 resource "aws_lb_listener_rule" "authenticated_hosts_paths_oidc" {
-  count = module.this.enabled && var.authentication_type == "OIDC" && length(var.authenticated_paths) > 0 && length(var.authenticated_hosts) > 0 ? length(var.authenticated_listener_arns) : 0
+  count = module.this.enabled && var.authentication_type == "OIDC" && length(var.authenticated_paths) > 0 && length(var.authenticated_hosts) > 0 && var.ignore_changes_action == false ? length(var.authenticated_listener_arns) : 0
+
+  listener_arn = var.authenticated_listener_arns[count.index]
+  priority     = var.authenticated_priority > 0 ? var.authenticated_priority + count.index : null
+
+  action {
+    type = "authenticate-oidc"
+
+    authenticate_oidc {
+      client_id              = var.authentication_oidc_client_id
+      client_secret          = var.authentication_oidc_client_secret
+      issuer                 = var.authentication_oidc_issuer
+      authorization_endpoint = var.authentication_oidc_authorization_endpoint
+      token_endpoint         = var.authentication_oidc_token_endpoint
+      user_info_endpoint     = var.authentication_oidc_user_info_endpoint
+      scope                  = var.authentication_oidc_scope
+
+      on_unauthenticated_request          = var.authentication_oidc_on_unauthenticated_request
+      authentication_request_extra_params = var.authentication_oidc_request_extra_params
+    }
+  }
+
+  action {
+    type             = "forward"
+    target_group_arn = local.target_group_arn
+  }
+
+  condition {
+    host_header {
+      values = var.authenticated_hosts
+    }
+  }
+
+  condition {
+    path_pattern {
+      values = var.authenticated_paths
+    }
+  }
+}
+
+resource "aws_lb_listener_rule" "authenticated_hosts_paths_oidc_ignore_changes_action" {
+  count = module.this.enabled && var.authentication_type == "OIDC" && length(var.authenticated_paths) > 0 && length(var.authenticated_hosts) > 0 && var.ignore_changes_action ? length(var.authenticated_listener_arns) : 0
 
   listener_arn = var.authenticated_listener_arns[count.index]
   priority     = var.authenticated_priority > 0 ? var.authenticated_priority + count.index : null
@@ -364,12 +655,50 @@ resource "aws_lb_listener_rule" "authenticated_hosts_paths_oidc" {
   }
 
   lifecycle {
-    ignore_changes = local.listener_rule_ignore_changes
+    ignore_changes = ["action"]
   }
 }
 
 resource "aws_lb_listener_rule" "authenticated_hosts_paths_cognito" {
-  count = module.this.enabled && var.authentication_type == "COGNITO" && length(var.authenticated_paths) > 0 && length(var.authenticated_hosts) > 0 ? length(var.authenticated_listener_arns) : 0
+  count = module.this.enabled && var.authentication_type == "COGNITO" && length(var.authenticated_paths) > 0 && length(var.authenticated_hosts) > 0 && var.ignore_changes_action == false ? length(var.authenticated_listener_arns) : 0
+
+  listener_arn = var.authenticated_listener_arns[count.index]
+  priority     = var.authenticated_priority > 0 ? var.authenticated_priority + count.index : null
+
+  action {
+    type = "authenticate-cognito"
+
+    authenticate_cognito {
+      user_pool_arn       = var.authentication_cognito_user_pool_arn
+      user_pool_client_id = var.authentication_cognito_user_pool_client_id
+      user_pool_domain    = var.authentication_cognito_user_pool_domain
+      scope               = var.authentication_cognito_scope
+
+      on_unauthenticated_request          = var.authentication_cognito_on_unauthenticated_request
+      authentication_request_extra_params = var.authentication_cognito_request_extra_params
+    }
+  }
+
+  action {
+    type             = "forward"
+    target_group_arn = local.target_group_arn
+  }
+
+  condition {
+    host_header {
+      values = var.authenticated_hosts
+    }
+  }
+
+  condition {
+    path_pattern {
+      values = var.authenticated_paths
+    }
+  }
+}
+
+resource "aws_lb_listener_rule" "authenticated_hosts_paths_cognito_ignore_changes_action" {
+  count = module.this.enabled && var.authentication_type == "COGNITO" && length(var.authenticated_paths) > 0 && length(var.authenticated_hosts) > 0 && var.ignore_changes_action ? length(var.authenticated_listener_arns) : 0
 
   listener_arn = var.authenticated_listener_arns[count.index]
   priority     = var.authenticated_priority > 0 ? var.authenticated_priority + count.index : null
@@ -406,6 +735,6 @@ resource "aws_lb_listener_rule" "authenticated_hosts_paths_cognito" {
   }
 
   lifecycle {
-    ignore_changes = local.listener_rule_ignore_changes
+    ignore_changes = ["action"]
   }
 }
