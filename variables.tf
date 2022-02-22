@@ -275,3 +275,9 @@ variable "stickiness_enabled" {
   default     = true
   description = "Boolean to enable / disable `stickiness`. Default is `true`"
 }
+
+variable "ignore_changes_action" {
+  type        = bool
+  default     = false
+  description = "Ignore changes in action, useful for Blue Green Deployment"
+}

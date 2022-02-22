@@ -76,28 +76,17 @@ resource "aws_lb_listener_rule" "unauthenticated_paths" {
       }
     }
   }
-}
 
-resource "aws_lb_listener_rule" "blue_green_unauthenticated_paths" {
-  count        = "${var.blue_green_deployment == "true" && length(var.unauthenticated_paths) > 0 && length(var.unauthenticated_hosts) == 0 ? var.unauthenticated_listener_arns_count : 0}"
-  listener_arn = "${var.unauthenticated_listener_arns[count.index]}"
-  priority     = "${var.unauthenticated_priority + count.index}"
+  dynamic "lifecycle" {
+    for_each = var.ignore_changes_action ? [""] : []
 
-  action = [
-    {
-      type             = "forward"
-      target_group_arn = "${local.target_group_arn}"
-    },
-  ]
-
-  condition {
-    field  = "path-pattern"
-    values = ["${var.unauthenticated_paths}"]
+    content {
+      ignore_changes = ["actions"]
+    }
   }
-
-  lifecycle {
-      ignore_changes = ["listener_arn", "action"]
-  }
+  #   lifecycle {
+  #       ignore_changes = ["listener_arn", "action"]
+  #   }
 }
 
 resource "aws_lb_listener_rule" "authenticated_paths_oidc" {
@@ -147,39 +136,12 @@ resource "aws_lb_listener_rule" "authenticated_paths_oidc" {
       }
     }
   }
-}
+  dynamic "lifecycle" {
+    for_each = var.ignore_changes_action ? [""] : []
 
-resource "aws_lb_listener_rule" "blue_green_authenticated_paths_oidc" {
-  count        = "${var.blue_green_deployment == "true" && var.authentication_type == "OIDC" && length(var.authenticated_paths) > 0 && length(var.authenticated_hosts) == 0 ? var.authenticated_listener_arns_count : 0}"
-  listener_arn = "${var.authenticated_listener_arns[count.index]}"
-  priority     = "${var.authenticated_priority + count.index}"
-
-  action = [
-    {
-      type = "authenticate-oidc"
-
-      authenticate_oidc {
-        client_id              = "${var.authentication_oidc_client_id}"
-        client_secret          = "${var.authentication_oidc_client_secret}"
-        issuer                 = "${var.authentication_oidc_issuer}"
-        authorization_endpoint = "${var.authentication_oidc_authorization_endpoint}"
-        token_endpoint         = "${var.authentication_oidc_token_endpoint}"
-        user_info_endpoint     = "${var.authentication_oidc_user_info_endpoint}"
-      }
-    },
-    {
-      type             = "forward"
-      target_group_arn = "${local.target_group_arn}"
-    },
-  ]
-
-  condition {
-    field  = "path-pattern"
-    values = ["${var.authenticated_paths}"]
-  }
-
-  lifecycle {
-      ignore_changes = ["listener_arn", "action"]
+    content {
+      ignore_changes = ["actions"]
+    }
   }
 }
 
@@ -227,36 +189,13 @@ resource "aws_lb_listener_rule" "authenticated_paths_cognito" {
       }
     }
   }
-}
 
-resource "aws_lb_listener_rule" "blue_green_authenticated_paths_cognito" {
-  count        = "${var.blue_green_deployment == "true" && var.authentication_type == "COGNITO" && length(var.authenticated_paths) > 0 && length(var.authenticated_hosts) == 0 ? var.authenticated_listener_arns_count : 0}"
-  listener_arn = "${var.authenticated_listener_arns[count.index]}"
-  priority     = "${var.authenticated_priority + count.index}"
+  dynamic "lifecycle" {
+    for_each = var.ignore_changes_action ? [""] : []
 
-  action = [
-    {
-      type = "authenticate-cognito"
-
-      authenticate_cognito {
-        user_pool_arn       = "${var.authentication_cognito_user_pool_arn}"
-        user_pool_client_id = "${var.authentication_cognito_user_pool_client_id}"
-        user_pool_domain    = "${var.authentication_cognito_user_pool_domain}"
-      }
-    },
-    {
-      type             = "forward"
-      target_group_arn = "${local.target_group_arn}"
-    },
-  ]
-
-  condition {
-    field  = "path-pattern"
-    values = ["${var.authenticated_paths}"]
-  }
-
-  lifecycle {
-      ignore_changes = ["listener_arn", "action"]
+    content {
+      ignore_changes = ["actions"]
+    }
   }
 }
 
@@ -277,8 +216,12 @@ resource "aws_lb_listener_rule" "unauthenticated_hosts" {
     }
   }
 
-  lifecycle {
-      ignore_changes = ["listener_arn", "action"]
+  dynamic "lifecycle" {
+    for_each = var.ignore_changes_action ? [""] : []
+
+    content {
+      ignore_changes = ["actions"]
+    }
   }
 }
 
@@ -315,39 +258,13 @@ resource "aws_lb_listener_rule" "authenticated_hosts_oidc" {
       values = var.authenticated_hosts
     }
   }
-}
 
-resource "aws_lb_listener_rule" "blue_green_authenticated_hosts_oidc" {
-  count        = "${var.blue_green_deployment == "true" && var.authentication_type == "OIDC" && length(var.authenticated_hosts) > 0 && length(var.authenticated_paths) == 0 ? var.authenticated_listener_arns_count : 0}"
-  listener_arn = "${var.authenticated_listener_arns[count.index]}"
-  priority     = "${var.authenticated_priority + count.index}"
+  dynamic "lifecycle" {
+    for_each = var.ignore_changes_action ? [""] : []
 
-  action = [
-    {
-      type = "authenticate-oidc"
-
-      authenticate_oidc {
-        client_id              = "${var.authentication_oidc_client_id}"
-        client_secret          = "${var.authentication_oidc_client_secret}"
-        issuer                 = "${var.authentication_oidc_issuer}"
-        authorization_endpoint = "${var.authentication_oidc_authorization_endpoint}"
-        token_endpoint         = "${var.authentication_oidc_token_endpoint}"
-        user_info_endpoint     = "${var.authentication_oidc_user_info_endpoint}"
-      }
-    },
-    {
-      type             = "forward"
-      target_group_arn = "${local.target_group_arn}"
-    },
-  ]
-
-  condition {
-    field  = "host-header"
-    values = ["${var.authenticated_hosts}"]
-  }
-
-  lifecycle {
-      ignore_changes = ["listener_arn", "action"]
+    content {
+      ignore_changes = ["actions"]
+    }
   }
 }
 
@@ -381,36 +298,13 @@ resource "aws_lb_listener_rule" "authenticated_hosts_cognito" {
       values = var.authenticated_hosts
     }
   }
-}
 
-resource "aws_lb_listener_rule" "blue_green_authenticated_hosts_cognito" {
-  count        = "${var.blue_green_deployment == "true" && var.authentication_type == "COGNITO" && length(var.authenticated_hosts) > 0 && length(var.authenticated_paths) == 0 ? var.authenticated_listener_arns_count : 0}"
-  listener_arn = "${var.authenticated_listener_arns[count.index]}"
-  priority     = "${var.authenticated_priority + count.index}"
+  dynamic "lifecycle" {
+    for_each = var.ignore_changes_action ? [""] : []
 
-  action = [
-    {
-      type = "authenticate-cognito"
-
-      authenticate_cognito {
-        user_pool_arn       = "${var.authentication_cognito_user_pool_arn}"
-        user_pool_client_id = "${var.authentication_cognito_user_pool_client_id}"
-        user_pool_domain    = "${var.authentication_cognito_user_pool_domain}"
-      }
-    },
-    {
-      type             = "forward"
-      target_group_arn = "${local.target_group_arn}"
-    },
-  ]
-
-  condition {
-    field  = "host-header"
-    values = ["${var.authenticated_hosts}"]
-  }
-
-  lifecycle {
-      ignore_changes = ["listener_arn", "action"]
+    content {
+      ignore_changes = ["actions"]
+    }
   }
 }
 
@@ -450,32 +344,13 @@ resource "aws_lb_listener_rule" "unauthenticated_hosts_paths" {
       }
     }
   }
-}
 
-resource "aws_lb_listener_rule" "blue_green_unauthenticated_hosts_paths" {
-  count        = "${var.blue_green_deployment == "true" && length(var.unauthenticated_paths) > 0 && length(var.unauthenticated_hosts) > 0 ? var.unauthenticated_listener_arns_count : 0}"
-  listener_arn = "${var.unauthenticated_listener_arns[count.index]}"
-  priority     = "${var.unauthenticated_priority + count.index}"
+  dynamic "lifecycle" {
+    for_each = var.ignore_changes_action ? [""] : []
 
-  action = [
-    {
-      type             = "forward"
-      target_group_arn = "${local.target_group_arn}"
-    },
-  ]
-
-  condition {
-    field  = "host-header"
-    values = ["${var.unauthenticated_hosts}"]
-  }
-
-  condition {
-    field  = "path-pattern"
-    values = ["${var.unauthenticated_paths}"]
-  }
-
-  lifecycle {
-      ignore_changes = ["listener_arn", "action"]
+    content {
+      ignore_changes = ["actions"]
+    }
   }
 }
 
@@ -519,8 +394,12 @@ resource "aws_lb_listener_rule" "authenticated_hosts_paths_oidc" {
     }
   }
 
-  lifecycle {
-      ignore_changes = ["listener_arn", "action"]
+  dynamic "lifecycle" {
+    for_each = var.ignore_changes_action ? [""] : []
+
+    content {
+      ignore_changes = ["actions"]
+    }
   }
 }
 
@@ -561,7 +440,11 @@ resource "aws_lb_listener_rule" "authenticated_hosts_paths_cognito" {
     }
   }
 
-  lifecycle {
-      ignore_changes = ["listener_arn", "action"]
+  dynamic "lifecycle" {
+    for_each = var.ignore_changes_action ? [""] : []
+
+    content {
+      ignore_changes = ["actions"]
+    }
   }
 }
