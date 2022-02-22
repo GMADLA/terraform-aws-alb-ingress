@@ -1,5 +1,6 @@
 locals {
-  target_group_arn = var.default_target_group_enabled ? join("", aws_lb_target_group.default.*.arn) : var.target_group_arn
+  target_group_arn             = var.default_target_group_enabled ? join("", aws_lb_target_group.default.*.arn) : var.target_group_arn
+  listener_rule_ignore_changes = var.ignore_changes_action ? ["action"] : []
 }
 
 data "aws_lb_target_group" "default" {
@@ -76,17 +77,9 @@ resource "aws_lb_listener_rule" "unauthenticated_paths" {
       }
     }
   }
-
-  dynamic "lifecycle" {
-    for_each = var.ignore_changes_action ? [""] : []
-
-    content {
-      ignore_changes = ["actions"]
-    }
+  lifecycle {
+    ignore_changes = local.listener_rule_ignore_changes
   }
-  #   lifecycle {
-  #       ignore_changes = ["listener_arn", "action"]
-  #   }
 }
 
 resource "aws_lb_listener_rule" "authenticated_paths_oidc" {
@@ -136,12 +129,8 @@ resource "aws_lb_listener_rule" "authenticated_paths_oidc" {
       }
     }
   }
-  dynamic "lifecycle" {
-    for_each = var.ignore_changes_action ? [""] : []
-
-    content {
-      ignore_changes = ["actions"]
-    }
+  lifecycle {
+    ignore_changes = local.listener_rule_ignore_changes
   }
 }
 
@@ -190,12 +179,8 @@ resource "aws_lb_listener_rule" "authenticated_paths_cognito" {
     }
   }
 
-  dynamic "lifecycle" {
-    for_each = var.ignore_changes_action ? [""] : []
-
-    content {
-      ignore_changes = ["actions"]
-    }
+  lifecycle {
+    ignore_changes = local.listener_rule_ignore_changes
   }
 }
 
@@ -216,12 +201,8 @@ resource "aws_lb_listener_rule" "unauthenticated_hosts" {
     }
   }
 
-  dynamic "lifecycle" {
-    for_each = var.ignore_changes_action ? [""] : []
-
-    content {
-      ignore_changes = ["actions"]
-    }
+  lifecycle {
+    ignore_changes = local.listener_rule_ignore_changes
   }
 }
 
@@ -259,12 +240,8 @@ resource "aws_lb_listener_rule" "authenticated_hosts_oidc" {
     }
   }
 
-  dynamic "lifecycle" {
-    for_each = var.ignore_changes_action ? [""] : []
-
-    content {
-      ignore_changes = ["actions"]
-    }
+  lifecycle {
+    ignore_changes = local.listener_rule_ignore_changes
   }
 }
 
@@ -299,12 +276,8 @@ resource "aws_lb_listener_rule" "authenticated_hosts_cognito" {
     }
   }
 
-  dynamic "lifecycle" {
-    for_each = var.ignore_changes_action ? [""] : []
-
-    content {
-      ignore_changes = ["actions"]
-    }
+  lifecycle {
+    ignore_changes = local.listener_rule_ignore_changes
   }
 }
 
@@ -345,12 +318,8 @@ resource "aws_lb_listener_rule" "unauthenticated_hosts_paths" {
     }
   }
 
-  dynamic "lifecycle" {
-    for_each = var.ignore_changes_action ? [""] : []
-
-    content {
-      ignore_changes = ["actions"]
-    }
+  lifecycle {
+    ignore_changes = local.listener_rule_ignore_changes
   }
 }
 
@@ -394,12 +363,8 @@ resource "aws_lb_listener_rule" "authenticated_hosts_paths_oidc" {
     }
   }
 
-  dynamic "lifecycle" {
-    for_each = var.ignore_changes_action ? [""] : []
-
-    content {
-      ignore_changes = ["actions"]
-    }
+  lifecycle {
+    ignore_changes = local.listener_rule_ignore_changes
   }
 }
 
@@ -440,11 +405,7 @@ resource "aws_lb_listener_rule" "authenticated_hosts_paths_cognito" {
     }
   }
 
-  dynamic "lifecycle" {
-    for_each = var.ignore_changes_action ? [""] : []
-
-    content {
-      ignore_changes = ["actions"]
-    }
+  lifecycle {
+    ignore_changes = local.listener_rule_ignore_changes
   }
 }
